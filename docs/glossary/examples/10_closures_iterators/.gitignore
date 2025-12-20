@@ -1,0 +1,34 @@
+# --- Build Artifacts ---
+# Contains all compiled binaries and intermediate build files
+/target/
+
+# --- Tools & IDEs ---
+# JetBrains (IntelliJ, RustRover, etc.)
+.idea/
+*.iml
+
+# Visual Studio Code
+.vscode/
+# Un-comment the lines below if you want to share specific VS Code settings:
+# !.vscode/launch.json
+# !.vscode/tasks.json
+
+# Backup files from editors
+*.rs.bk
+*.swp
+*~
+
+# --- Dependency Management ---
+# Cargo.lock is usually tracked for "Applications" but can be ignored for "Libraries".
+# However, the modern consensus is often to include it for both to ensure reproducibility.
+# Cargo.lock
+
+# --- Environment & Security ---
+# Local environment variables (may contain secrets)
+.env
+.env.local
+.env.*.local
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
