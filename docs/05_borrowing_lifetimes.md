@@ -8,6 +8,7 @@
   - [Lifetime Annotations in Structs](#lifetime-annotations-in-structs)
   - [The Static Lifetime](#the-static-lifetime)
   - [Visualization: Dangling Reference Prevention](#visualization-dangling-reference-prevention)
+  - [Figure: Key Points of Borrowing Rules (Concise)](#figure-key-points-of-borrowing-rules-concise)
 
 ## Overview
 
@@ -80,4 +81,13 @@ graph TD
 
     style RefNG stroke:#f66,stroke-width:2px,color:#f66
     style Dead fill:#fff1f1,stroke:#f66
+```
+
+## Figure: Key Points of Borrowing Rules (Concise)
+
+```mermaid
+flowchart LR
+  Owner[所有者] -->|"&T (不変借用)"| Reader[複数の読み取り]
+  Owner -->|"&mut T (可変借用)"| Writer[単独の書き換え]
+  Reader -. conflict .-> Writer
 ```

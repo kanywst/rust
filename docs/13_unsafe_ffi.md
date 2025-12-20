@@ -6,6 +6,7 @@
   - [The Five Superpowers of Unsafe](#the-five-superpowers-of-unsafe)
   - [Concise Explanation: Why Unsafe?](#concise-explanation-why-unsafe)
   - [Code Example: Calling C Functions (FFI)](#code-example-calling-c-functions-ffi)
+  - [Checklist: Things to Check Before Using unsafe](#checklist-things-to-check-before-using-unsafe)
   - [Notes: Safety Abstraction](#notes-safety-abstraction)
 
 ## Overview
@@ -55,6 +56,13 @@ fn main() {
 }
 
 ```
+
+## Checklist: Things to Check Before Using unsafe
+
+- **本当にunsafeでなければならないか**：安全な代替（高レベルAPIや外部クレート）がないか確認する。
+- **最小限に限定する**：unsafeの範囲を可能な限り小さくする（関数単位など）。
+- **安全条件を明文化する**：何が保証されているか（ポインタの有効性など）をコメントで説明する。
+- **テストと検証**：ユニットテスト、ドキュメントテスト、ファジングで境界ケースを検証する。
 
 ## Notes: Safety Abstraction
 

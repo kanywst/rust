@@ -6,6 +6,7 @@
   - [The Pillars of Fearless Concurrency](#the-pillars-of-fearless-concurrency)
   - [Thread-Wide Sharing Architecture](#thread-wide-sharing-architecture)
   - [Asynchronous Programming (async/await)](#asynchronous-programming-asyncawait)
+  - [Diagram: Relationship Between Executor and Future (Concise)](#diagram-relationship-between-executor-and-future-concise)
   - [Technical Notes: Send and Sync](#technical-notes-send-and-sync)
 
 ## Overview
@@ -79,11 +80,20 @@ async fn main() {
 
 ```
 
+## Diagram: Relationship Between Executor and Future (Concise)
+
+```mermaid
+flowchart LR
+  Future[Future] -->|ポーリング| Executor[Executor]
+  Executor -->|実行| Task[Task]
+  Task -->|I/O待ち| Executor
+```
+
 ## Technical Notes: Send and Sync
 
 これらは手動で実装するものではなく、コンパイラが自動で判断する「マーカートレイト」です。
 
-- **ほぼ全ての型は `Send` かつ `Sync**` です。
+- **ほぼ全ての型は `Send` かつ `Sync`** です。
 - **例外**:
   - `Rc<T>` はスレッド間でカウンタを更新すると壊れるため、`Send` でも `Sync` でもありません。
   - `RefCell<T>` はスレッド安全な借用チェックを行わないため、`Sync` ではありません。
