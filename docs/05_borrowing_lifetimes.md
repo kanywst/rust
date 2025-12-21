@@ -3,16 +3,15 @@
 - [Rust 05: Borrowing and Lifetimes](#rust-05-borrowing-and-lifetimes)
   - [Overview](#overview)
   - [Borrowing Rules](#borrowing-rules)
-  - [Understanding Lifetimes](#understanding-lifetimes)
+  - [Understanding Lifetimes: The 'a Contract](#understanding-lifetimes-the-a-contract)
+  - [String vs String Literals](#string-vs-string-literals)
   - [Lifetime Elision Rules](#lifetime-elision-rules)
-  - [Lifetime Annotations in Structs](#lifetime-annotations-in-structs)
   - [The Static Lifetime](#the-static-lifetime)
-  - [Visualization: Dangling Reference Prevention](#visualization-dangling-reference-prevention)
-  - [Figure: Key Points of Borrowing Rules (Concise)](#figure-key-points-of-borrowing-rules-concise)
+  - [Visualization: Lifetime Overlap and Safety](#visualization-lifetime-overlap-and-safety)
 
 ## Overview
 
-借用（Borrowing）は、所有権を移動させずにデータにアクセスする仕組みです。Rustは「参照」が常に有効であることを保証するために**ライフタイム**という概念を使用します。これにより、データが消えた後にその場所を指し続ける「ダングリングポインタ」をコンパイル時に完全に防ぎます。
+借用（Borrowing）は、所有権を移動させずにデータにアクセスする仕組みです。Rustは「参照」が常に有効であることを保証するために**ライフタイム**という概念を使用します。これにより、データが消えた（スタックが戻った、またはヒープが解放された）後にその場所を指し続ける事故をコンパイル時に完全に防ぎます。
 
 ## Borrowing Rules
 
@@ -22,72 +21,57 @@
 2. **可変参照 (`&mut T`)**: 同時にたった一人しか貸し出せない。
    - **重要**: 可変参照がある間は、不変参照も存在できません。「誰かが書き換える可能性があるなら、他の人は読んでもいけない」というルールです。
 
-## Understanding Lifetimes
+## Understanding Lifetimes: The 'a Contract
 
-ライフタイムは、参照が「有効である期間」を指します。
+ライフタイム注釈（`'a`）は、寿命を延ばす魔法ではありません。**「複数の参照の有効期限を、共通のグループとして束ねる契約書」**です。
 
-- **目的**: 貸主（所有者）が死んだ後も、借主（参照）が生き残るという事故を防ぐこと。
-- **ライフタイム注釈 (`'a`)**: 関数が複数の参照を受け取り、参照を返す際、どの引数と戻り値の寿命が紐付いているかをコンパイラに伝えます。
+- **役割**: 関数が参照を返す際、その参照の「賞味期限」がどの引数に依存しているかをコンパイラに明示します。
+- **実態**: コンパイラは `'a` をもとに、「短い方の寿命」に合わせて戻り値の有効期限を設定します。
 
 ```rust
-// 「戻り値の寿命は、xとyのうち短い方の寿命と同じになる」という宣言
+// 「戻り値の寿命は、xとyの両方が生きている期間（共通期間）に限定される」という契約
 fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
     if x.len() > y.len() { x } else { y }
 }
 
 ```
 
+## String vs String Literals
+
+借用を理解する上で、文字列の出自の違いを知ることは不可欠です。
+
+| 種類 | 例 | 型 | メモリ位置 | 特徴 |
+| --- | --- | --- | --- | --- |
+| **String** | `String::from("a")` | `String` | ヒープ | 所有者あり。`as_str()` 等で参照を作る必要がある。 |
+| **リテラル** | `"abc"` | `&'static str` | バイナリ | **最初から参照。** プログラム終了まで死なない最強の寿命。 |
+
 ## Lifetime Elision Rules
 
-コンパイラは、よくあるパターンについては注釈を自動で推論します（省略規則）。
+よくあるパターンは、コンパイラが自動で `'a` を補完（省略）します。
 
-1. 各引数の参照には、それぞれ独自のライフタイムが割り当てられる。
-2. 入力参照が1つだけなら、その寿命がすべての出力参照に割り当てられる。
-3. メソッド（`&self` を持つ場合）は、`self` の寿命が出力参照すべてに割り当てられる。
-
-## Lifetime Annotations in Structs
-
-構造体が「参照」をフィールドとして持つ場合、その構造体は参照先より長く生きることはできません。そのため、構造体定義にもライフタイム注釈が必要です。
-
-```rust
-struct Excerpt<'a> {
-    part: &'a str, // 構造体は part が指すデータより長く生きられない
-}
-
-```
+1. 引数が1つの参照なら、戻り値もその寿命になる。
+2. `&self` があれば、戻り値は `self` の寿命になる。
+3. **それ以外（引数が複数あり、どれを返すか不明な場合など）は明示的な `'a` が必要。**
 
 ## The Static Lifetime
 
-`'static` は特別なライフタイムで、プログラムの開始から終了までずっと有効であることを示します。
+`'static` はプログラムの開始から終了まで有効な特殊なライフタイムです。ダブルクォーテーションで囲まれた文字列リテラル(`"Hello"`)は、メモリリークの心配がない「静的データ」としてこの寿命を持ちます。
 
-- 文字列リテラル (`"Hello"`) はバイナリに直接書き込まれているため、常に `'static` です。
+## Visualization: Lifetime Overlap and Safety
 
-## Visualization: Dangling Reference Prevention
-
-借用チェッカーは、**「データの寿命」** と **「参照の寿命」** を比較し、参照の方が長く生きようとした場合にコンパイルエラーを出します。
+借用チェッカーは、物理的な解放（drop）のタイミングと、参照の利用タイミングを比較します。
 
 ```mermaid
-graph TD
-    subgraph Timeline [時間軸: 1日 〜 10日]
-        Data[データ実体の生存期間]
-    end
+sequenceDiagram
+    participant S1 as s1 (String: 実体)
+    participant S2 as s2 (リテラル: 最初から参照)
+    participant Ans as ans (longestの戻り値)
 
-    Data -->|10日に消滅| Dead[11日以降: メモリ解放済み]
+    S1->>S1: 生成（ヒープ確保）
+    Note over S1, S2: longest(s1.as_str(), s2)
+    S1-->>Ans: 'a は S1 の寿命に縛られる
+    Note right of Ans: S1が生きている間だけ有効
+    S1->>S1: スコープ終了 (Drop/物理的解放)
+    Note over Ans: これ以降、Ansへのアクセスは禁止(論理的消滅)
 
-    subgraph Borrowing [借用計画]
-        RefOK[参照A: 2日〜9日で終了] -->|安全| Data
-        RefNG[参照B: 2日〜11日まで継続] -.->|危険!| Dead
-    end
-
-    style RefNG stroke:#f66,stroke-width:2px,color:#f66
-    style Dead fill:#fff1f1,stroke:#f66
-```
-
-## Figure: Key Points of Borrowing Rules (Concise)
-
-```mermaid
-flowchart LR
-  Owner[所有者] -->|"&T (不変借用)"| Reader[複数の読み取り]
-  Owner -->|"&mut T (可変借用)"| Writer[単独の書き換え]
-  Reader -. conflict .-> Writer
 ```
